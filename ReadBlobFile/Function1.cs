@@ -1,26 +1,31 @@
 //using System.Linq;
 using System;
-using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
-using CsvHelper;
+using System.Net;
+using System.Net.Http;
+using System.Text;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
-using Microsoft.WindowsAzure.Storage.Table;
+using Newtonsoft.Json;
+using Microsoft.AspNetCore.Mvc;
+using CsvHelper;
+using System.Globalization;
 
 namespace ReadBlobFile
 {
     public static class Function1
     {
         [FunctionName("FileOperations")]
-        public static void Run([TimerTrigger("0 */1 * * * *")] TimerInfo myTimer, ILogger log)
+        // public static void Run([TimerTrigger("0 */1 * * * *")] TimerInfo myTimer, ILogger log)
 
-        //public static void Run([BlobTrigger("hisofiles/{name}.csv", Connection = "AzureWebJobsStorage")] Stream myBlob,
-        //    string name, [Table("Employee", Connection = "AzureWebJobsStorage")] IAsyncCollector<Employee> employeeTable,
-        //    ILogger log)
+        public static void Run([BlobTrigger("hisofiles/{name}", Connection = "")] Stream myBlob, string name, ILogger log)
         {
+            
             log.LogInformation($"C# Timer trigger function executed at: {DateTime.Now}");
 
             try
@@ -33,14 +38,15 @@ namespace ReadBlobFile
                 // Connect to the blob container
                 CloudBlobContainer container = serviceClient.GetContainerReference("hisofiles");
                 // Connect to the blob file
-                CloudBlockBlob blob = container.GetBlockBlobReference("mohsin.csv");
-                
+                CloudBlockBlob blob = container.GetBlockBlobReference(name);
+
                 using (var memoryStream = new MemoryStream())
                 {
                     blob.DownloadToStreamAsync(memoryStream).GetAwaiter().GetResult();
+                  //  blob.UploadFromStreamAsync(memoryStream);  // upload blob to storage.
                     memoryStream.Position = 0;
                     using (var reader = new StreamReader(memoryStream))
-                    using (var csv = new CsvReader(reader, CultureInfo.CurrentCulture))
+                    using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
                     {
                         var records = csv.GetRecords<Foo>();
                         foreach (Foo item in records)
@@ -57,6 +63,29 @@ namespace ReadBlobFile
                 Console.WriteLine(ex);
             }
         }
+
+        //private async static Task CreateBlob(string name, string data)
+        //{
+        //    CloudBlobClient client;
+        //    CloudBlobContainer container;
+        //    CloudBlockBlob blob;
+
+        //    var cs = Environment.GetEnvironmentVariable("AzureWebJobsStorage");
+        //    CloudStorageAccount storageAccount = CloudStorageAccount.Parse(cs);
+        //    client = storageAccount.CreateCloudBlobClient();
+
+        //    container = client.GetContainerReference("hisofiles");
+
+        //    await container.CreateIfNotExistsAsync();
+
+        //    blob = container.GetBlockBlobReference(name);
+        //    blob.Properties.ContentType = "application/json";
+
+        //    using (Stream stream = new MemoryStream(Encoding.UTF8.GetBytes(data)))
+        //    {
+        //        await blob.UploadFromStreamAsync(stream);
+        //    }
+        //}
     }
 
     public class Foo
